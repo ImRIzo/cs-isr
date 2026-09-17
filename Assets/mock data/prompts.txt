@@ -1,0 +1,45 @@
+
+
+------------------------------------------------------------
+Prompt 1 — basic novice site (start here)
+
+novice construction site with a perimeter fence, a building and stacked
+materials
+
+Expected: fence on the edge, a 4x4 building, one struck-by hazard from the
+material stack, clear walking route.
+
+------------------------------------------------------------
+Prompt 2 — expert site with traffic
+
+expert site with two cranes, moving trucks and an unmarked road crossing
+
+Expected: subtle hazards, ground + mounted cranes, trucks near the road,
+footprints spaced apart.
+
+------------------------------------------------------------
+Prompt 3 — intermediate material storage
+
+intermediate site focused on material storage: containers, cargo and an
+unstable stack
+
+Expected: containers cluster, cargo container possibly blocking a route,
+struck-by hazard on the stack.
+
+------------------------------------------------------------
+Prompt 4 — simple flat site, two cranes
+
+simple flat site: one building with a mounted crane, one ground crane and a
+clear walking route
+
+Expected: mounted crane overlapping the building (allowed exception), ground
+crane elsewhere, route from (0,0) to (9,9) stays clear.
+
+
+hazard-rich expert site: swing-load crane zone, truck traffic and a fall edge
+on the building
+
+Expected: expert subtlety mapping, fall hazard on the building, truck and
+crane struck-by sources, validators keep footprints apart.
+
+

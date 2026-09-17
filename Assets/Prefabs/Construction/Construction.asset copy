@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 755625a597966433eab162787e35f9d3, type: 3}
+  m_Name: Construction
+  m_EditorClassIdentifier: Assembly-CSharp::ObjectCatalog
+  Entries:
+  - type: building
+    displayName: Building Shell
+    safetyRole: unfinished building under construction; main structure
+    prefab: {fileID: 7013162504856818770, guid: 43504e308dbc846479c49b3af1479d03, type: 3}
+  - type: crane_mounted
+    displayName: Tower Crane (Mounted)
+    safetyRole: mounted with on the building, slightly taller; overhead swung-load
+      hazard
+    prefab: {fileID: 381799492227681162, guid: 1eb6a2c0abae2485fa7f145f8c38902d, type: 3}
+  - type: crane_ground
+    displayName: Tower Crane (Ground)
+    safetyRole: on the ground, as tall as the building; overhead swung-load hazard
+    prefab: {fileID: 381799492227681162, guid: 1eb6a2c0abae2485fa7f145f8c38902d, type: 3}
+  - type: fence
+    displayName: Perimeter Fence
+    safetyRole: surrounds the site; blocks pedestrian routes
+    prefab: {fileID: 381799492227681162, guid: 1eb6a2c0abae2485fa7f145f8c38902d, type: 3}
+  - type: ground
+    displayName: Site Ground
+    safetyRole: inside the fence, as large as the fenced area; scenery base
+    prefab: {fileID: 381799492227681162, guid: 1eb6a2c0abae2485fa7f145f8c38902d, type: 3}
+  - type: road
+    displayName: Site Road
+    safetyRole: runs around the construction site; vehicle/pedestrian route; always
+      place this into center position
+    prefab: {fileID: 7278935429173057341, guid: 25ada3f48536947698cd6fc21e8a1ec7, type: 3}
+  - type: ramp
+    displayName: Access Ramp
+    safetyRole: route element between levels
+    prefab: {fileID: 4779878851122884562, guid: 31837cd168ab34fe8b984c94a05835cb, type: 3}
+  - type: containers
+    displayName: Rubble Container
+    safetyRole: open-top; material collection point
+    prefab: {fileID: 7918255852838205891, guid: 21cce911adb1742dab851007ea3c013f, type: 3}
+  - type: trucks
+    displayName: Site Trucks
+    safetyRole: dumper/concrete trucks; moving struck-by sources
+    prefab: {fileID: 8801953682593065128, guid: 07cdb7273b9e64df49483606cd4da7bd, type: 3}
+  - type: containers_office
+    displayName: Site Office
+    safetyRole: occupied workspace
+    prefab: {fileID: 5482861350589829661, guid: bf830f17f5e58414cab8037a98a76555, type: 3}
+  - type: containers_cargo
+    displayName: Cargo Container
+    safetyRole: closed storage; can block routes
+    prefab: {fileID: 1790426021479339372, guid: 7d762897b7a674f2c8b07ff11e7396d5, type: 3}
+  - type: construction_materials
+    displayName: Construction Materials
+    safetyRole: planks/boxes/barrels; unstable stacks = struck-by hazard
+    prefab: {fileID: 1319514960298780603, guid: 52480e2dfd743451bba8e06800fe26a5, type: 3}

@@ -1,0 +1,53 @@
+{
+  "_note": "MOCK of the response body DeepSeek returns (HTTP 200). In the real API, choices[0].message.content is a STRING containing the CS-ISR scenario JSON. The extra _readable_content key is only in this mock file — it is the same payload parsed, for human reading.",
+  "id": "chatcmpl-mock-000000-0000",
+  "object": "chat.completion",
+  "created": 1757840000,
+  "model": "deepseek-v4-flash",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"schema_version\":\"0.1\",\"scenario\":{\"title\":\"Simple construction site\",\"learning_objective\":\"Recognize struck-by hazards around stacked materials and moving trucks while crossing the site\",\"difficulty\":\"novice\",\"trade\":\"laborer\",\"duration_hint_seconds\":180},\"objects\":[{\"id\":\"fence_1\",\"type\":\"fence\",\"cell\":[0,8],\"task_role\":\"site_boundary\"},{\"id\":\"road_1\",\"type\":\"road\",\"cell\":[1,4],\"task_role\":\"vehicle_route\"},{\"id\":\"materials_1\",\"type\":\"construction_materials\",\"cell\":[3,2],\"task_role\":\"unstable_stack_source\"},{\"id\":\"trucks_1\",\"type\":\"trucks\",\"cell\":[6,2],\"task_role\":\"moving_struck_by_source\"},{\"id\":\"building_1\",\"type\":\"building\",\"cell\":[5,5],\"task_role\":\"main_structure\"},{\"id\":\"crane_mounted_1\",\"type\":\"crane_mounted\",\"cell\":[6,6],\"task_role\":\"overhead_hazard_source\"},{\"id\":\"crane_ground_1\",\"type\":\"crane_ground\",\"cell\":[8,2],\"task_role\":\"overhead_hazard_source\"},{\"id\":\"container_1\",\"type\":\"containers\",\"cell\":[2,8],\"task_role\":\"material_collection_point\"}],\"hazards\":[{\"id\":\"h1\",\"type\":\"struck_by_material\",\"source_object_id\":\"materials_1\",\"subtlety\":\"obvious\",\"required_controls\":[\"barricade\",\"safe_zone\"],\"regulation_ref\":\"OSHA 1926.250(b)\"},{\"id\":\"h2\",\"type\":\"struck_by_material\",\"source_object_id\":\"trucks_1\",\"subtlety\":\"moderate\",\"required_controls\":[\"traffic_plan\",\"safe_zone\"],\"regulation_ref\":\"OSHA 1926.602(c)\"},{\"id\":\"h3\",\"type\":\"fall_from_height\",\"source_object_id\":\"building_1\",\"subtlety\":\"moderate\",\"required_controls\":[\"guardrail\",\"fall_arrest\"],\"regulation_ref\":\"OSHA 1926.501(b)(4)\"}],\"task\":{\"type\":\"site_walkthrough\",\"start_cell\":[0,0],\"goal_cell\":[9,9],\"blocked_cells\":[]}}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1450,
+    "completion_tokens": 620,
+    "total_tokens": 2070
+  },
+  "_readable_content": {
+    "schema_version": "0.1",
+    "scenario": {
+      "title": "Simple construction site",
+      "learning_objective": "Recognize struck-by hazards around stacked materials and moving trucks while crossing the site",
+      "difficulty": "novice",
+      "trade": "laborer",
+      "duration_hint_seconds": 180
+    },
+    "objects": [
+      { "id": "fence_1", "type": "fence", "cell": [0, 8], "task_role": "site_boundary" },
+      { "id": "road_1", "type": "road", "cell": [1, 4], "task_role": "vehicle_route" },
+      { "id": "materials_1", "type": "construction_materials", "cell": [3, 2], "task_role": "unstable_stack_source" },
+      { "id": "trucks_1", "type": "trucks", "cell": [6, 2], "task_role": "moving_struck_by_source" },
+      { "id": "building_1", "type": "building", "cell": [5, 5], "task_role": "main_structure" },
+      { "id": "crane_mounted_1", "type": "crane_mounted", "cell": [6, 6], "task_role": "overhead_hazard_source" },
+      { "id": "crane_ground_1", "type": "crane_ground", "cell": [8, 2], "task_role": "overhead_hazard_source" },
+      { "id": "container_1", "type": "containers", "cell": [2, 8], "task_role": "material_collection_point" }
+    ],
+    "hazards": [
+      { "id": "h1", "type": "struck_by_material", "source_object_id": "materials_1", "subtlety": "obvious", "required_controls": ["barricade", "safe_zone"], "regulation_ref": "OSHA 1926.250(b)" },
+      { "id": "h2", "type": "struck_by_material", "source_object_id": "trucks_1", "subtlety": "moderate", "required_controls": ["traffic_plan", "safe_zone"], "regulation_ref": "OSHA 1926.602(c)" },
+      { "id": "h3", "type": "fall_from_height", "source_object_id": "building_1", "subtlety": "moderate", "required_controls": ["guardrail", "fall_arrest"], "regulation_ref": "OSHA 1926.501(b)(4)" }
+    ],
+    "task": {
+      "type": "site_walkthrough",
+      "start_cell": [0, 0],
+      "goal_cell": [9, 9],
+      "blocked_cells": []
+    }
+  }
+}
