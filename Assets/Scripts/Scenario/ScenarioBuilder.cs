@@ -62,13 +62,33 @@ public class ScenarioBuilder
         fence.transform.localPosition = new Vector3(center, 0f, center);
     }
 
-    // floor_slab is implicit in the schema (task.md §4): the whole 20x20 m slab.
+    // The site ground (task.md §4: implicit, never listed by the LLM): the
+    // catalog's "ground" prefab — it carries a real collider (user note
+    // 2026-09-27) — with the primitive slab as fallback.
     void BuildFloor(Transform parent)
     {
+        float center = (ScenarioValidator.GridSize - 1) * ScenarioValidator.CellSizeMeters * 0.5f; // 9
+
+        var groundPrefab = Catalog?.GetEntry("ground")?.prefab;
+        if (groundPrefab != null)
+        {
+            var ground = (GameObject)UnityEngine.Object.Instantiate(groundPrefab, parent);
+            ground.name = "ground";
+            // Centered on the site like the fence. The Ground prefab's collider
+            // (100x0.255x100 source units, center y 0.104, at 0.2 scale) tops
+            // out at ~0.046 m — lower the prefab so the top stays at y=0, the
+            // floor level the player and validator assume.
+            ground.transform.localPosition = new Vector3(center, -0.046f, center);
+            // The Ground prefab carries a Rigidbody (user note 2026-09-27) —
+            // pin it kinematic so the floor never falls or gets shoved around.
+            var groundBody = ground.GetComponent<Rigidbody>();
+            if (groundBody != null) groundBody.isKinematic = true;
+            return;
+        }
+
         var slab = GameObject.CreatePrimitive(PrimitiveType.Cube);
         slab.name = "floor_slab";
         slab.transform.SetParent(parent, false);
-        float center = (ScenarioValidator.GridSize - 1) * ScenarioValidator.CellSizeMeters * 0.5f; // 9
         slab.transform.localPosition = new Vector3(center, -0.1f, center);
         slab.transform.localScale = new Vector3(
             ScenarioValidator.GridSize * ScenarioValidator.CellSizeMeters, 0.2f,

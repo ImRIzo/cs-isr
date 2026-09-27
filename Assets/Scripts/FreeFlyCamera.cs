@@ -73,11 +73,6 @@ public class FreeFlyCamera : MonoBehaviour
             moveSpeed = Mathf.Clamp(moveSpeed + scroll * scrollSpeedStep, minSpeed, maxSpeed);
     }
 
-    // void OnGUI()
-    // {
-    //     GUI.Label(new Rect(10, 45, 400, 24), $"Fly cam speed: {moveSpeed:0} m/s (scroll to change)");
-    // }
-
     // True while a UI input field has keyboard focus (the prompt field) —
     // camera controls (and the player-camera toggle) stay out of the way
     // while the user is typing.

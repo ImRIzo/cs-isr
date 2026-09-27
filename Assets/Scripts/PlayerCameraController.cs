@@ -129,10 +129,4 @@ public class PlayerCameraController : MonoBehaviour
         }
         active = false;
     }
-
-    void OnGUI()
-    {
-        if (!active) return;
-        GUI.Label(new Rect(10, 45, 400, 24), "Player view — WASD walk, mouse look, C to return to fly camera");
-    }
 }

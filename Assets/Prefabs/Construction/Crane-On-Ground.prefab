@@ -214,6 +214,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: f7cb95934549c406f812dd57a6ce3091, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2808126850525677769}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: f7cb95934549c406f812dd57a6ce3091, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 877357139262232512}
   m_SourcePrefab: {fileID: 100100000, guid: f7cb95934549c406f812dd57a6ce3091, type: 3}
 --- !u!1 &6104093406000103508 stripped
 GameObject:
@@ -241,6 +244,20 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 26.230778, y: 12.173981, z: 42.982162}
   m_Center: {x: 6.339026, y: 6.0869904, z: 11.606386}
+--- !u!114 &877357139262232512
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6104093406000103508}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93d78a97887fe4c30b675a96b47ac407, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FallCubeTrigger
+  fallCube: {fileID: 8101539889455442809}
+  releaseBoost: 0
 --- !u!4 &6916904712247745262 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: f7cb95934549c406f812dd57a6ce3091, type: 3}
