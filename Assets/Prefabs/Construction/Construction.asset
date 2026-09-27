@@ -29,7 +29,7 @@ MonoBehaviour:
   - type: crane_ground
     displayName: Tower Crane (Ground)
     safetyRole: on the ground, as tall as the building; overhead swung-load hazard
-    prefab: {fileID: 381799492227681162, guid: 1eb6a2c0abae2485fa7f145f8c38902d, type: 3}
+    prefab: {fileID: 6104093406000103508, guid: 2ab1b735442a14103841a8e236f9d33b, type: 3}
     footprintX: 1
     footprintY: 1
   - type: fence

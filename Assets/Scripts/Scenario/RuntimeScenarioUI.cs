@@ -68,7 +68,7 @@ public class RuntimeScenarioUI : MonoBehaviour
             if (result.Success)
             {
                 new ScenarioBuilder { Catalog = catalog }.BuildIntoScene(result.Scenario);
-                SetStatus($"ACCEPTED '{result.Scenario.Meta.Title}' — scene built in {result.TotalSeconds:0.0}s.");
+                SetStatus($"ACCEPTED '{result.Scenario.Meta.Title}' — scene built in {result.TotalSeconds:0.0}s. Press C to walk the site.");
             }
             else
             {

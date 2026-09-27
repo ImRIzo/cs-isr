@@ -162,18 +162,20 @@ public static class PrimitiveFactory
 
     static void BuildWorker(Transform t)
     {
+        // Toy-scale worker to match the construction prefabs (all 0.2x, e.g.
+        // a truck is ~0.6 m tall): ~0.6 m total instead of real-world 1.9 m.
         var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         body.name = "body";
         body.transform.SetParent(t, false);
-        body.transform.localPosition = new Vector3(0f, 0.95f, 0f);
-        body.transform.localScale = new Vector3(0.55f, 0.9f, 0.55f);
+        body.transform.localPosition = new Vector3(0f, 0.3f, 0f);
+        body.transform.localScale = new Vector3(0.18f, 0.3f, 0.18f);
         body.GetComponent<Renderer>().sharedMaterial = GetMaterial(Orange);
 
         var helmet = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         helmet.name = "helmet";
         helmet.transform.SetParent(t, false);
-        helmet.transform.localPosition = new Vector3(0f, 1.8f, 0f);
-        helmet.transform.localScale = Vector3.one * 0.22f;
+        helmet.transform.localPosition = new Vector3(0f, 0.575f, 0f);
+        helmet.transform.localScale = Vector3.one * 0.075f;
         helmet.GetComponent<Renderer>().sharedMaterial = GetMaterial(Yellow);
     }
 }

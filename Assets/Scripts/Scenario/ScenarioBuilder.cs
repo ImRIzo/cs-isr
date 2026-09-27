@@ -106,6 +106,8 @@ public class ScenarioBuilder
         player.transform.SetParent(parent, false);
         // Cell center, same convention as the object footprints.
         player.transform.localPosition = CellToWorld(start[0], start[1]) + new Vector3(1f, 0f, 1f);
+        // Walk mode: in Play mode this adds the player camera (toggle with C).
+        player.AddComponent<PlayerCameraController>();
     }
 
 #if UNITY_EDITOR

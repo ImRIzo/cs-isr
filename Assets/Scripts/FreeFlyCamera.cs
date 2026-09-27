@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 // Free-fly camera: attach to the camera GameObject and press Play.
 // Uses the legacy Input Manager (the project's Active Input Handling is
@@ -9,6 +11,9 @@ using UnityEngine;
 //   Shift           hold to move faster
 //   Right mouse     hold + drag to look around (cursor locks while held)
 //   Mouse wheel     change the movement speed
+//
+// All input is suspended while the prompt field has focus, so typing a
+// prompt never steers the camera.
 
 public class FreeFlyCamera : MonoBehaviour
 {
@@ -32,6 +37,9 @@ public class FreeFlyCamera : MonoBehaviour
 
     void Update()
     {
+        // Typing in the prompt field must not steer the camera.
+        if (TypingInInputField()) return;
+
         // Look: hold the right mouse button and drag.
         if (Input.GetMouseButton(1))
         {
@@ -65,8 +73,17 @@ public class FreeFlyCamera : MonoBehaviour
             moveSpeed = Mathf.Clamp(moveSpeed + scroll * scrollSpeedStep, minSpeed, maxSpeed);
     }
 
-    void OnGUI()
+    // void OnGUI()
+    // {
+    //     GUI.Label(new Rect(10, 45, 400, 24), $"Fly cam speed: {moveSpeed:0} m/s (scroll to change)");
+    // }
+
+    // True while a UI input field has keyboard focus (the prompt field) —
+    // camera controls (and the player-camera toggle) stay out of the way
+    // while the user is typing.
+    public static bool TypingInInputField()
     {
-        GUI.Label(new Rect(10, 45, 400, 24), $"Fly cam speed: {moveSpeed:0} m/s (scroll to change)");
+        var selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+        return selected != null && selected.GetComponent<InputField>() != null;
     }
 }
