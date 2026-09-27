@@ -1,11 +1,11 @@
 # demo_a — PCGML Construction Scenario Generator: Documentation
 
-Last updated: 2026-09-18 · Companion to `task.md` (the design) and `changelog.md` (the history).
+Last updated: 2026-09-27 · Companion to `task.md` (the design) and `changelog.md` (the history).
 
 This document has three parts:
 1. **The Generate flow** — every function call from button click to built scene, in order.
 2. **Script reference** — every script and what it does.
-3. **Conventions & gotchas** — grid rules, settings, lessons learned.
+3. **Conventions & gotchas** — grid & measurement rules, controls, settings, lessons learned.
 
 ---
 
@@ -55,14 +55,14 @@ Both entry points (Play-mode UI and editor window) converge on the same core. Th
 ### Inside `ScenarioBuilder.BuildIntoScene()` (`ScenarioBuilder.cs`)
 
 14. Destroys the previous `ScenarioRoot` (regeneration replaces the scene).
-15. `BuildFloor()` — 20×20 m gray slab at the grid base.
+15. `BuildFloor()` — instantiates the catalog's **`ground` prefab** once, centered on the site (world 9,−0.046,9) so its collider top sits at y = 0; any Rigidbody on it is pinned kinematic. Fallback: the old 20×20 m gray slab.
 16. `BuildSiteFence()` — instantiates the `fence` prefab **once, centered on the site** (world 9,0,9). Site-scale scenery is never a grid object.
 17. For each object → `PlaceObject()`:
     - prefab = `Catalog.GetEntry(type).prefab` (fallback: `PrimitiveFactory.Build(type)` if no link);
     - positioned at the **center of its covered footprint**: `CellToWorld(x,y) + (footprintX, 0, footprintY)` meters;
     - rotated by `rotation_y`.
-18. `PlacePlayer()` — worker prefab at the start cell's center.
-19. Logs `[Scenario] Built '…': N objects, M hazards.` → `RuntimeScenarioUI` shows the ACCEPTED status line.
+18. `PlacePlayer()` — worker prefab at the start cell's center + `PlayerCameraController` (the Play-mode walk rig, see section 3).
+19. Logs `[Scenario] Built '…': N objects, M hazards.` → `RuntimeScenarioUI` shows the ACCEPTED status line ("…Press C to walk the site.").
 
 ### Editor window path (for completeness)
 
@@ -77,8 +77,9 @@ Both entry points (Play-mode UI and editor window) converge on the same core. Th
 | Script | What it does |
 |---|---|
 | `AppManager.cs` | Scene-config singleton (put on an empty GameObject). Holds `apiKey`, `model`, `endpoint`, `maxTokens`, `maxRetries`, `requestTimeoutSeconds`. `DeepSeekClient` reads it first. In editor Play mode an empty `apiKey` falls back to the EditorPrefs value. |
-| `Player.cs` | FPS counter overlay (OnGUI), template leftover — decorative. |
-| `FreeFlyCamera.cs` | Attached to the Main Camera. WASD camera-relative movement, Space/Ctrl up-down, Shift fast, hold RMB+drag to look (cursor locks), mouse wheel adjusts speed. Uses legacy Input (project is set to "Both"). |
+| `FreeFlyCamera.cs` | Attached to the Main Camera. WASD camera-relative movement, Space/Ctrl up-down, Shift fast, hold RMB+drag to look (cursor locks), mouse wheel adjusts speed. Uses legacy Input (project is set to "Both"). **All input is suspended while the prompt `InputField` has focus** (`TypingInInputField()` — also used by the player-camera toggle). |
+| `PlayerCameraController.cs` | Play-mode walk rig, added to `player_spawn` by `ScenarioBuilder`. **C** toggles between the fly camera and the player view; the fly camera's GameObject is disabled (not moved), so its view is restored exactly. Player view: eye-height child camera (0.45 m), WASD walk (Shift run, 2 m/s) via a `CharacterController` (0.6 m tall, radius 0.12 — sized to the toy-scale worker), mouse look with locked cursor, worker body hidden while active. Cursor unlocks and the view is handed back on exit/teardown. |
+| `FallCubeTrigger.cs` | One-shot falling hazard for the ground crane (attach to the GameObject with the trigger BoxCollider). Holds `fall_cube` kinematic until the player's CharacterController enters the zone, then releases it with `ContinuousDynamic` CCD (anti-tunneling through the 0.05 m-thin ground) and a runtime bouncy `PhysicsMaterial` (`Bounce` field, default 0.5; skipped if the cube already has a bouncy material). `releaseBoost` = optional downward nudge. Falls once per build. |
 
 ### `Assets/Scripts/Scenario/` (runtime pipeline — also compiles in player builds)
 
@@ -91,9 +92,9 @@ Both entry points (Play-mode UI and editor window) converge on the same core. Th
 | `PromptBuilder.cs` | Builds everything the LLM reads: `BuildSystemPrompt(catalog)` (rules + catalog table + catalog-aware few-shot example), `BuildUserPrompt`, `BuildRepairPrompt` (structured error list), `DetectDifficulty` (parses difficulty word from prompt), `ConstructionExample()` (valid 7×6-building site), `ExampleScenario()` (legacy), `StripCodeFences`. |
 | `ScenarioValidator.cs` | Pure validation, no scene access. `ValidationError/Result`, `ValidateAll` → `SchemaValidate` + `GeometryValidate` + `SafetyValidate`. Footprint-aware occupancy, `cell_collision` with the crane-on-building exception, BFS route, hazard reachability, controlled-state contradiction, subtlety↔difficulty warnings. Constants: `GridSize = 10`, `CellSizeMeters = 2`. |
 | `ScenarioGenerator.cs` | Orchestrator: prompt → parse → validate → repair loop (max 2 retries, re-validates everything each pass, same chat session) → `GenerationResult` with timings, raw JSON, per-attempt results, audit/rejection report. |
-| `ScenarioBuilder.cs` | CS-ISR → scene: floor slab, site fence (auto-centered), objects at footprint centers, player at start cell. Editor-only `SaveToAssets` writes provenance JSON + asset to `Assets/Scenarios/`. |
-| `PrimitiveFactory.cs` | Fallback primitive shapes + cached colored materials (URP Lit with fallbacks) when a catalog entry has no prefab. Keeps the pipeline runnable with an incomplete catalog. |
-| `RuntimeScenarioUI.cs` | Play-mode entry point. UI refs (InputField, Button, Text) + catalog slot. `OnGenerateClicked` = the flow in section 1. Status text shows the last 8 log lines; full trail goes to the Console. |
+| `ScenarioBuilder.cs` | CS-ISR → scene: `ground` prefab floor (top at y=0, Rigidbody pinned kinematic; slab fallback), site fence (auto-centered), objects at footprint centers, player at start cell + `PlayerCameraController`. Editor-only `SaveToAssets` writes provenance JSON + asset to `Assets/Scenarios/`. |
+| `PrimitiveFactory.cs` | Fallback primitive shapes + cached colored materials (URP Lit with fallbacks) when a catalog entry has no prefab. The `worker` is **toy-scale (~0.6 m total)** to match the 0.2× construction prefabs. Keeps the pipeline runnable with an incomplete catalog. |
+| `RuntimeScenarioUI.cs` | Play-mode entry point. UI refs (InputField, Button, Text) + catalog slot. `OnGenerateClicked` = the flow in section 1. Status text shows the last 8 log lines; full trail goes to the Console. Success line hints "Press C to walk the site." |
 
 ### `Assets/Scripts/Scenario/Editor/` (editor tools)
 
@@ -105,20 +106,54 @@ Both entry points (Play-mode UI and editor window) converge on the same core. Th
 
 | Asset | Role |
 |---|---|
-| `Assets/Prefabs/Construction/Construction.asset` | **The** catalog: 12 entries from the Majadroid pack. Footprints: building **7×6** (measured), cranes 2×2, road 1×4, trucks 2×1, rest 1×1; `fence`/`ground` are implicit (auto-placed / never listed). |
-| `Assets/Prefabs/Construction/*.prefab` | The 12 model prefabs (pack FBX at scale 0.2). |
-| `Assets/Scenes/SampleScene.unity` | The scene: Main Camera (+ FreeFlyCamera, Player), Canvas with PromptInput/GenerateButton/StatusText, RuntimeScenarioUI, AppManager. |
+| `Assets/Prefabs/Construction/Construction.asset` | **The** catalog: 12 entries from the Majadroid pack. Footprints: building **7×6** (measured), cranes 2×2, road 1×4, trucks 2×1, rest 1×1; `fence`/`ground` are implicit (auto-placed / never listed). The `ground` entry points at `Ground.prefab` (was miswired to `Crane-Mounted.prefab` until 2026-09-27). |
+| `Assets/Prefabs/Construction/*.prefab` | The 12 model prefabs (pack FBX at scale 0.2). `Ground.prefab` carries a 20×20 m BoxCollider + kinematic Rigidbody; `Crane-On-Ground.prefab` carries the falling-hazard setup (trigger BoxCollider + `fall_cube` with Rigidbody mass 5). |
+| `Assets/Scenes/SampleScene.unity` | The scene: Main Camera (+ FreeFlyCamera), Canvas with PromptInput/GenerateButton/StatusText, RuntimeScenarioUI, AppManager. The player camera rig is added at runtime by the builder — nothing to wire in the scene. |
 | `Assets/mock data/` | `out.json` / `in.json` (mock data-flow docs), `prompts.pdf`/`prompts.txt` (5 sample prompts). |
 
 ---
 
 ## 3. Conventions & gotchas
 
-**Grid & footprints**
-- 10×10 grid of 2 m cells on a 20×20 m slab. World pos of cell (x,y) = (x·2, 0, y·2).
-- An object's `cell` is its footprint's **bottom-left anchor**; the footprint extends +x/+y (cell counts, e.g. building 7×6 = 14×12 m).
-- `ScenarioBuilder` places objects at the **center** of their footprint; the player spawns at cell center.
-- Implicit types (never in the LLM's objects, validator rejects them): `floor_slab`, `ground`, `fence`. `fence` is auto-placed once at the site center.
+### Grid & measurement — how the 20×20 m works
+
+- **The constants.** `ScenarioValidator.GridSize = 10` and `CellSizeMeters = 2`. One cell is **2 m × 2 m**; 10 cells per side × 2 m = a **20×20 m** site slab.
+- **Cell → world.** Cell `(x, y)` has its bottom-left corner at world `(x·2, 0, y·2)`, so the cell spans `x·2 .. x·2+2` in X and `y·2 .. y·2+2` in Z. The **center** of the cell — where 1×1 objects and the player end up — is `(x·2 + 1, 0, y·2 + 1)`. Cells span world 0..20 in both axes (cell (9,9) covers 18..20).
+- **The slab / ground / fence are centered on the site**, at world (9, 0, 9), so they span **−1..19 m** — the last grid column (world 18..20) pokes ~1 m past their edge. This is a known margin quirk (objects in row/column 9 sit at the very rim; a falling crane cube near the rim can land just past the ground's edge).
+- **Footprints.** An object's `cell` is the **bottom-left anchor** of its catalog footprint (`footprintX × footprintY` cells); the footprint extends **+x / +y** from there. The builder places the object at the **center of its covered footprint**: `CellToWorld(x, y) + (footprintX, 0, footprintY)` meters (half the footprint, since 1 cell = 2 m → footprintX cells = footprintX meters of offset).
+  - Example: building 7×6 at (2,2) → anchor world (4,0,4), center (11,0,10), covering x 4..18, z 4..16 — 14×12 m.
+- **Prefab scale — why everything is small.** The Majadroid pack FBX files import with `UnitScaleFactor = 100` (centimeters). The Construction prefabs are all variants at **0.2× scale**, so a real-world ~3 m truck reads as **~0.6 m tall** in the scene — sized to fit the 2 m cells. The primitive `worker` was rebuilt to ~0.6 m total (CharacterController 0.6 m, eye 0.45 m, walk 2 m/s) to match. If a model looks wrong-sized, check its prefab's scale before touching footprint numbers.
+- **Implicit types** (never in the LLM's objects; the validator rejects them): `floor_slab`, `ground`, `fence`. `ground` (top at y = 0) and `fence` are auto-placed once at the site center.
+
+The whole grid at a glance (the few-shot building, footprint 7×6 at cell (2,2), shaded ▓):
+
+```
+z (m)                                          cell y
+ 20 ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐   9
+ 18 ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤   8
+ 16 ├───┼───┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼───┤   7
+ 14 ├───┼───┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼───┤   6
+ 12 ├───┼───┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼───┤   5
+ 10 ├───┼───┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼───┤   4
+  8 ├───┼───┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼───┤   3
+  6 ├───┼───┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼▓▓▓┼───┤   2
+  4 ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤   1
+  2 └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘   0
+    0   2   4   6   8  10  12  14  16  18  20   x (m)
+```
+
+- Left axis = world Z (the grid's `y` coordinate), bottom axis = world X (the grid's `x`); right axis = the cell index `y` 0..9 (cell index `x` runs 0..9 left to right). One cell = 2 m × 2 m, so the grid spans world **0..20 m** per side (10 × 2 m).
+- The shaded building at cell (2,2): anchor = world (4, 0, 4), center = (11, 0, 10), covering x 4..18 m × z 4..16 m. The slab/ground/fence are centered at (9, 0, 9) instead, spanning −1..19 m — one meter short of the grid's outer edge (the margin quirk above).
+
+### Play-mode controls
+
+| Mode | Input | What it does |
+|---|---|---|
+| Fly camera | WASD / Space+Ctrl / Shift / RMB-drag / wheel | move (camera-relative) / up-down / fast / look / speed. **All suspended while the prompt InputField has focus.** |
+| Player view | **C** | toggle from fly camera to player view (cursor locks) |
+| Player view | WASD / Shift / mouse | walk (camera-relative, flat) / run / look |
+| Player view | **C** | return to the fly camera (previous view restored; cursor unlocked) |
+| Site | walk into the crane's trigger zone | `fall_cube` drops from the crane head (once per build; bounces per its `Bounce` setting) |
 
 **Prompt & model**
 - Difficulty is detected from the prompt text (novice/intermediate/expert; `expart` alias), not a dropdown — Play mode has no dropdown anymore (the editor window still has one).
@@ -132,6 +167,10 @@ Both entry points (Play-mode UI and editor window) converge on the same core. Th
 - `SaveAsPrefabAsset` drops runtime-created materials → prefabs must reference real `.mat` assets (or primitives). Never regenerate prefabs via code for this project.
 - DeepSeek thinking mode returns empty `content` (text in `reasoning_content`) → client sends `thinking_mode: non-thinking` AND falls back to `reasoning_content`.
 - Newtonsoft's error-swallowing handler can return `null` for invalid JSON → `FromJson` throws on null so the repair loop sees a real parse error.
+- **Repair loop can get prose back instead of JSON:** when the LLM can't satisfy the geometry (e.g. an overfull prompt like "two cranes, 5 trucks, 3 offices" against the 7×6 building's footprint), a repair pass may answer with an *explanation* of the validator error rather than corrected JSON → both `json_parse` errors land and the candidate is REJECTED after 3 attempts (the REJECTED line shows only the last attempt's errors). Mitigations: softer prompts (let the model pick counts), and/or a repair-prompt line like "Do not explain the errors — reply with the corrected JSON only."
+- **Thin ground + fast falls = tunneling:** the ground collider is only ~0.05 m thick; a cube dropped from ~6 m hits at ~11 m/s and can skip it between physics steps. The falling cube therefore uses `ContinuousDynamic` collision detection. Any new falling object needs the same.
+- **The floor must be kinematic:** `Ground.prefab` has a Rigidbody (mass 1) — it must stay **Is Kinematic** (the builder also pins it), otherwise it falls under gravity at Play start and gets shoved around by heavier falling objects.
+- **Unity 6 physics API names:** the material class is `PhysicsMaterial` / `PhysicsMaterialCombine` (the old `PhysicMaterial` spelling does not compile). Runtime bounce materials are assigned via `collider.sharedMaterial`.
 - Active Input Handling is "Both" — uGUI uses legacy `Input`; do not switch to Input-System-only without replacing the EventSystem module.
 - URP: pipeline assets are assigned in Graphics Settings; primitives use `Shader.Find("Universal Render Pipeline/Lit")` with Standard/Unlit fallbacks.
-- `Temp/UnityLockfile` can go stale after a crash → delete it before running batch-mode Unity commands against the project.
+- `Temp/UnityLockfile` can go stale after a crash → delete it before running batch-mode Unity commands against the project. (A batch-mode run also exits early with no compile if the editor currently holds the lock — the editor's own recompile covers that case.)

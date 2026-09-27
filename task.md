@@ -30,7 +30,7 @@ few-shot example        │ ✓
 
 ### Design decisions
 
-- **D1 — LLM plans, deterministic code places.** Free coordinates from LLMs are unreliable. The floor is a **10×10 grid over a 20×20 m slab**; the LLM assigns objects to grid *cells* and expresses relations ("barrier blocks route cell (4,5)"). Cell occupancy makes collision checking near-trivial and lets a BFS check route reachability.
+- **D1 — LLM plans, deterministic code places.** Free coordinates from LLMs are unreliable. The floor is a **10×10 grid over a 20×20 m slab**; the LLM assigns objects to grid *cells* and expresses relations ("barrier blocks route cell (4,5)"). Cell occupancy makes collision checking near-trivial and lets a BFS check route reachability. **Measurement convention:** one cell = 2 m × 2 m (`GridSize = 10`, `CellSizeMeters = 2`), so the slab is 10 × 2 m = **20×20 m**. Cell `(x, y)` maps to world `(x·2, 0, y·2)` (bottom-left corner; cell center at `(x·2 + 1, 0, y·2 + 1)`); the slab/fence/ground are centered at world (9, 0, 9) and span −1..19 m. Construction prefabs are 0.2× scale to fit the 2 m cells (see documentation.md for the full explanation).
 - **D2 — Closed object catalog.** The LLM may only use types listed in `ObjectCatalog` (system prompt). Unknown types → schema error → repair. This matches the proposal's "controllable, relation-first logic".
 - **D3 — Call DeepSeek directly from Unity for this slice.** OpenAI-compatible REST needs no SDK; `UnityWebRequest` works in the editor. Wrap it in an `ILLMClient` interface so a Python middleman (needed later for RAG/OSHA retrieval and the PCGML model, proposal Table 2) can be swapped in without touching the pipeline. Also write a `MockLLMClient` (returns canned JSON from a file) so scene-building work proceeds without network/API key.
 - **D4 — Editor-time generation first.** An authoring tool (`ScenarioGeneratorWindow`) matches the "interactive authoring ≤ 10 s" target and keeps the API key on the dev machine. Runtime/adaptive generation comes after M4.
@@ -110,13 +110,15 @@ Required fields are enforced by `ScenarioValidator` (stage 1 below). Optional fi
 
 Prefab ↔ type mapping lives in one `ScriptableObject` (`ObjectCatalog.asset`). Adding a hazard family later = add prefabs + rows + prompt text, no code change.
 
+> **Status 2026-09-27:** the primitive catalog above was the v0 placeholder — the pipeline now runs on the **Majadroid construction catalog** (`Assets/Prefabs/Construction/Construction.asset`, 12 types: `building` 7×6, `crane_mounted`, `crane_ground`, `fence`, `ground`, `road`, `ramp`, `trucks`, `containers`, `containers_cargo`, `containers_office`, `construction_materials`; footprints per entry). `fence` and `ground` are implicit (auto-placed, rejected in the LLM's object list). PrimitiveFactory remains the fallback for entries without a prefab link.
+
 ## 5. Pipeline stages and validators (proposal §5 → v0)
 
 1. **SchemaValidator** — parse JSON; required fields present; `type` values are catalog members; cells in [0,9]²; hazard `source_object_id` exists; difficulty ∈ {novice, intermediate, expert}. Failure → repair loop. *(proposal target: ≥ 95/100 schema-valid)*
 2. **GeometryValidator** — no two objects share a cell (except allowed stacks); grid BFS from `start_cell` to `goal_cell` with `blocked_cells` + occupied cells removed → route exists; hazard source cells reachable. *(target: ≥ 98/100 collision-free, task locations reachable)*
 3. **SafetyValidator (v0)** — every hazard carries `regulation_ref` + non-empty `required_controls` + existing source; *controlled-state contradiction check*: a fall hazard whose source opening has `has_guardrail: true` is rejected (a "prohibited state" — the hazard must actually be present for training); `subtlety` matches difficulty mapping (novice → obvious/moderate, expert → subtle). *(target: every accepted hazard has provenance)*
 4. **Repair loop** — on failure, append the validator's structured error list to the conversation and ask the LLM to fix only those errors. Max 2 retries, then abort with a logged report of *why* the candidate was rejected (proposal's auditable accept/reject trail).
-5. **ScenarioBuilder** — instantiates prefabs per object, sets cell → world position (cell center × 2 m), spawns player at `start_cell`, and serializes the final CS-ISR JSON as an asset for provenance.
+5. **ScenarioBuilder** — instantiates prefabs per object at the **center of its covered footprint** (`CellToWorld(x,y) + (footprintX, 0, footprintY)` meters), spawns the player at `start_cell` (with `PlayerCameraController` for Play-mode walk mode), auto-places the implicit floor (`ground` prefab, top at y = 0; primitive slab as fallback) and site fence once at the site center, and serializes the final CS-ISR JSON as an asset for provenance.
 
 All validators are pure C# functions over the parsed data (no Unity scene access) so they are unit-testable and later reusable in a Python server.
 
@@ -138,30 +140,36 @@ All validators are pure C# functions over the parsed data (no Unity scene access
 ### Files
 
 ```
-Assets/Scripts/Scenario/
-  ScenarioData.cs              # CS-ISR POCOs (scenario, object, hazard, task)
-  ObjectCatalog.cs             # ScriptableObject: type → prefab + catalog text
-  PromptBuilder.cs             # system + few-shot + user prompt assembly
-  ILLMClient.cs                # interface: Prompt -> string JSON
-  DeepSeekClient.cs            # UnityWebRequest implementation
-  MockLLMClient.cs             # file-backed fake for offline dev
-  ScenarioValidator.cs         # schema + geometry + safety → List<ValidationError>
-  ScenarioGenerator.cs         # orchestrator: prompt → validate/repair → data
-  ScenarioBuilder.cs           # CS-ISR → scene instantiation + asset save
-Assets/Scripts/Scenario/Editor/
-  ScenarioGeneratorWindow.cs   # prompt box, difficulty, variants, log, settings
-Assets/Prefabs/Scenario/       # primitive-based prefabs from catalog table
+Assets/Scripts/
+  AppManager.cs                # scene singleton: apiKey/model/endpoint/tokens
+  FreeFlyCamera.cs             # fly camera (WASD, RMB-look); suspended while the prompt field has focus
+  PlayerCameraController.cs    # walk mode: C toggles player camera, WASD walk + mouse look
+  FallCubeTrigger.cs           # one-shot falling hazard (crane trigger zone → fall_cube drops)
+  Scenario/
+    ScenarioData.cs            # CS-ISR POCOs (scenario, object, hazard, task)
+    ObjectCatalog.cs           # ScriptableObject: type → prefab + footprint + catalog text
+    PromptBuilder.cs           # system + few-shot + user + repair prompt assembly
+    ILLMClient.cs              # interface: Prompt -> string JSON
+    DeepSeekClient.cs          # UnityWebRequest implementation (MockLLMClient removed 2026-09-18)
+    ScenarioValidator.cs       # schema + geometry + safety → List<ValidationError>
+    ScenarioGenerator.cs       # orchestrator: prompt → validate/repair → data
+    ScenarioBuilder.cs         # CS-ISR → scene instantiation + asset save
+    PrimitiveFactory.cs        # primitive fallback shapes (incl. toy-scale worker)
+    RuntimeScenarioUI.cs       # Play-mode UI entry point (prompt InputField → generate)
+  Scenario/Editor/
+    ScenarioGeneratorWindow.cs # prompt box, difficulty, variants, log, settings
+Assets/Prefabs/Construction/   # Majadroid pack prefabs (0.2× scale) + Construction.asset catalog
 Assets/Scenarios/              # generated .asset + .json outputs
 ```
 
 ## 8. Milestones
 
-- [ ] **M0 — API smoke test.** `DeepSeekClient` + a menu item sends a hello-world prompt, receives JSON in the console. API key configured via `EditorPrefs`.
-- [ ] **M1 — Schema + prompt.** `ScenarioData`, `PromptBuilder`, generator returns a *parsed* CS-ISR from the example prompt. `MockLLMClient` works end-to-end so M1 has no network dependency.
-- [ ] **M2 — Validators + repair loop.** Schema/geometry/safety checks pass/fail with error lists; failed candidates are repaired via re-prompt (≤ 2 retries); rejection report logged.
-- [ ] **M3 — Scene instantiation.** Prefab library built; `ScenarioBuilder` produces the playable scene (opening without guardrail, blocked route, pallet task). Visual check in editor.
-- [ ] **M4 — Editor UX + variants.** Window: generate 1 or 5 variants, show JSON diff between variants, save/load scenario assets, generation time shown (target ≤ 10 s).
-- [ ] **M5 (later) — Runtime + RAG.** Generate in builds via server; OSHA rule snippets retrieved (RAG) into the system prompt; trainee-performance adaptation.
+- [x] **M0 — API smoke test.** `DeepSeekClient` + a menu item sends a hello-world prompt, receives JSON in the console. API key configured via `EditorPrefs`.
+- [x] **M1 — Schema + prompt.** `ScenarioData`, `PromptBuilder`, generator returns a *parsed* CS-ISR from the example prompt. (Mock client was removed 2026-09-18 — the pipeline is DeepSeek-only.)
+- [x] **M2 — Validators + repair loop.** Schema/geometry/safety checks pass/fail with error lists; failed candidates are repaired via re-prompt (≤ 2 retries); rejection report logged.
+- [x] **M3 — Scene instantiation.** Construction catalog built; `ScenarioBuilder` produces the playable scene (floor, fence, hazards). Visual check in editor.
+- [x] **M4 — Editor UX + variants.** Window: generate 1 or 5 variants, show JSON diff between variants, save/load scenario assets, generation time shown (target ≤ 10 s).
+- [~] **M5 — Runtime playability (in progress since 2026-09-27).** Play-mode UI generates in-editor (same pipeline); the built scene is walkable — **C** toggles to a first-person player camera (WASD walk, mouse look), and an interactive falling-cube hazard on the ground crane triggers when the player walks under it. RAG/server-side generation still open.
 
 ## 9. Risks and mitigations
 
